@@ -1,0 +1,2697 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Настраиваемое Меню</title>
+  <style>
+    :root {
+      --bg: #181c23;
+      --surface: #202630;
+      --surface-alt: #262d39;
+      --input-bg: #191e26;
+      --text: #eef2f7;
+      --text-muted: #8d99ab;
+      --accent: #007aff;
+      --accent-contrast: #ffffff;
+      --danger: #ef4444;
+      --success: #7bd88f;
+      --success-text: #112617;
+      --border-subtle: rgba(255, 255, 255, 0.05);
+
+      --shadow-light: rgba(255, 255, 255, 0.055);
+      --shadow-dark: rgba(0, 0, 0, 0.58);
+
+      --radius: 12px;
+      --shadow-depth: 5px;
+      --shadow-blur: 12px;
+
+      --font-family: 'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif;
+      --font-size: 18px;
+      --letter-spacing: 0.5px;
+      --text-transform: uppercase;
+      --text-shadow: none;
+
+      --menu-width: 400px;
+      --item-pad-y: 15px;
+      --item-gap: 12px;
+      --icon-size: 64px;
+      --icon-cols: auto;
+      --backdrop-blur: 8px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100dvh;
+      width: 100%;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-family);
+      transition: background-color 0.25s ease, color 0.25s ease;
+      overflow-x: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    }
+
+    .neu-raised {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      box-shadow:
+        calc(var(--shadow-depth) * -1) calc(var(--shadow-depth) * -1) var(--shadow-blur) var(--shadow-light),
+        var(--shadow-depth) var(--shadow-depth) var(--shadow-blur) var(--shadow-dark);
+    }
+
+    .neu-btn {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      font-family: var(--font-family);
+      cursor: pointer;
+      user-select: none;
+      touch-action: manipulation;
+      box-shadow:
+        calc(var(--shadow-depth) * -0.75) calc(var(--shadow-depth) * -0.75) calc(var(--shadow-blur) * 0.85) var(--shadow-light),
+        calc(var(--shadow-depth) * 0.85) calc(var(--shadow-depth) * 0.85) calc(var(--shadow-blur) * 0.85) var(--shadow-dark);
+      transition: transform 0.14s ease, box-shadow 0.14s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .neu-btn:hover:not(:disabled) {
+      border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    }
+
+    .neu-btn:active:not(:disabled) {
+      transform: scale(0.985);
+      box-shadow:
+        inset 3px 3px 6px var(--shadow-dark),
+        inset -3px -3px 6px var(--shadow-light);
+    }
+
+    .neu-btn:disabled {
+      opacity: 0.32;
+      cursor: default;
+    }
+
+    .neu-inset {
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1px solid var(--border-subtle);
+      border-radius: calc(var(--radius) * 0.85);
+      box-shadow:
+        inset 3px 3px 7px var(--shadow-dark),
+        inset -2px -2px 6px var(--shadow-light);
+    }
+
+    /* Главное окно Меню */
+    .menu-shell {
+      width: min(100%, var(--menu-width));
+      border-radius: calc(var(--radius) * 1.65);
+      padding: 20px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      transition: width 0.2s ease, border-radius 0.2s ease, padding 0.2s ease, background-color 0.25s ease;
+      position: relative;
+      z-index: 1;
+    }
+
+    .menu-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 2px 4px;
+    }
+
+    .menu-title {
+      margin: 0;
+      font-size: calc(var(--font-size) * 1.05);
+      font-weight: 700;
+      letter-spacing: calc(var(--letter-spacing) + 0.5px);
+      text-transform: var(--text-transform);
+      text-shadow: var(--text-shadow);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .menu-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .icon-circle-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      position: relative;
+    }
+
+    .icon-circle-btn svg {
+      width: 18px;
+      height: 18px;
+      display: block;
+    }
+
+    .key-active-dot {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 6px var(--success);
+    }
+
+    /* Режим СПИСОК */
+    .menu-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--item-gap);
+    }
+
+    .menu-item-btn {
+      width: 100%;
+      padding: var(--item-pad-y) 16px;
+      text-align: left;
+      font-size: var(--font-size);
+      font-weight: 600;
+      letter-spacing: var(--letter-spacing);
+      text-transform: var(--text-transform);
+      text-shadow: var(--text-shadow);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 48px;
+      word-break: break-word;
+    }
+
+    .menu-item-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .list-item-icon {
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: calc(var(--radius) * 0.55);
+      overflow: hidden;
+    }
+
+    .list-item-icon img, .list-item-icon svg {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .menu-item-btn::after {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0;
+      transform: scale(0.5);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .menu-item-btn:hover::after {
+      opacity: 0.9;
+      transform: scale(1);
+    }
+
+    /* Режим ИКОНКИ (как на скриншоте) */
+    .menu-list.mode-icons {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(calc(var(--icon-size) + 14px), 1fr));
+      gap: max(12px, var(--item-gap)) 8px;
+      align-items: start;
+    }
+
+    .menu-list.mode-icons.fixed-cols {
+      grid-template-columns: repeat(var(--icon-cols), minmax(0, 1fr));
+    }
+
+    .menu-icon-tile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 2px;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: var(--font-family);
+      cursor: pointer;
+      user-select: none;
+      touch-action: manipulation;
+      min-width: 0;
+      transition: transform 0.14s ease;
+    }
+
+    .menu-icon-tile:active {
+      transform: scale(0.92);
+    }
+
+    .tile-icon-box {
+      width: min(var(--icon-size), 100%);
+      aspect-ratio: 1 / 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: calc(var(--radius) * 1.25);
+      position: relative;
+      transition: transform 0.16s ease, filter 0.16s ease;
+    }
+
+    .menu-icon-tile:hover .tile-icon-box {
+      transform: translateY(-2px);
+      filter: brightness(1.06);
+    }
+
+    .tile-icon-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: calc(var(--radius) * 1.15);
+      filter: drop-shadow(0 4px 8px var(--shadow-dark));
+      display: block;
+    }
+
+    .tile-icon-emoji {
+      font-size: calc(var(--icon-size) * 0.56);
+      line-height: 1;
+      filter: drop-shadow(0 4px 6px var(--shadow-dark));
+    }
+
+    .default-app-icon {
+      width: 100%;
+      height: 100%;
+      border-radius: calc(var(--radius) * 1.25);
+      background: linear-gradient(145deg, color-mix(in srgb, var(--surface-alt) 85%, var(--accent) 15%), var(--surface));
+      border: 1px solid var(--border-subtle);
+      box-shadow:
+        calc(var(--shadow-depth) * -0.6) calc(var(--shadow-depth) * -0.6) calc(var(--shadow-blur) * 0.7) var(--shadow-light),
+        calc(var(--shadow-depth) * 0.7) calc(var(--shadow-depth) * 0.7) calc(var(--shadow-blur) * 0.8) var(--shadow-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 22%;
+      color: var(--accent);
+    }
+
+    .default-app-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .tile-label {
+      width: 100%;
+      text-align: center;
+      font-size: clamp(11px, calc(var(--font-size) * 0.66), 14px);
+      font-weight: 600;
+      letter-spacing: calc(var(--letter-spacing) * 0.5);
+      text-transform: var(--text-transform);
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.25;
+    }
+
+    .empty-menu-state {
+      grid-column: 1 / -1;
+      padding: 26px 16px;
+      text-align: center;
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .empty-menu-state p {
+      margin: 0;
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .empty-add-btn {
+      padding: 11px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent-contrast);
+      background: var(--accent);
+      border: none;
+    }
+
+    /* Модальные окна */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 10, 14, 0.58);
+      backdrop-filter: blur(var(--backdrop-blur));
+      -webkit-backdrop-filter: blur(var(--backdrop-blur));
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
+      z-index: 100;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+      animation: fadeIn 0.18s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-card {
+      width: min(100%, 460px);
+      max-height: 90dvh;
+      border-radius: calc(var(--radius) * 1.45);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: popIn 0.18s ease;
+    }
+
+    .modal-card.wide {
+      width: min(100%, 640px);
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.96) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px 14px;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    .close-square-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: calc(var(--radius) * 0.75);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .tabs-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-family);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 12px 10px;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .tab-btn.active {
+      color: var(--text);
+      background: color-mix(in srgb, var(--surface-alt) 55%, transparent);
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    .modal-body {
+      padding: 18px 20px 22px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overscroll-behavior: contain;
+    }
+
+    .tab-panel {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .tab-panel.active {
+      display: flex;
+    }
+
+    .setting-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .setting-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .style-switch-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .style-mode-btn {
+      padding: 11px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1.5px solid transparent;
+    }
+
+    .style-mode-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .color-swatch-input {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 40px;
+      height: 36px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .color-swatch-input::-webkit-color-swatch-wrapper { padding: 0; }
+    .color-swatch-input::-webkit-color-swatch {
+      border: 2px solid var(--border-subtle);
+      border-radius: 9px;
+    }
+
+    .hex-value {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--pct, 50%), rgba(130, 145, 165, 0.35) var(--pct, 50%), rgba(130, 145, 165, 0.35) 100%);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+      cursor: pointer;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+      cursor: pointer;
+    }
+
+    .text-input, .select-input, .code-textarea {
+      width: 100%;
+      padding: 11px 14px;
+      font-size: 14px;
+      font-family: var(--font-family);
+      outline: none;
+    }
+
+    .select-input { cursor: pointer; }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+    }
+
+    .custom-check {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      appearance: none;
+      -webkit-appearance: none;
+      background: var(--input-bg);
+      border: 1.5px solid color-mix(in srgb, var(--text-muted) 45%, transparent);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .custom-check:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .custom-check:checked::after {
+      content: '';
+      width: 5px;
+      height: 10px;
+      border: solid #fff;
+      border-width: 0 2.2px 2.2px 0;
+      transform: rotate(45deg) translate(-1px, -1px);
+    }
+
+    .themes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+      gap: 8px;
+    }
+
+    .theme-chip {
+      padding: 9px 10px;
+      border-radius: calc(var(--radius) * 0.8);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: left;
+      border: 1.5px solid transparent;
+    }
+
+    .theme-chip.active { border-color: var(--accent); }
+
+    .theme-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 1px solid rgba(128, 128, 128, 0.4);
+    }
+
+    /* Управление пунктами меню */
+    .items-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--accent-contrast);
+      border: none;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      border-radius: calc(var(--radius) * 0.85);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: filter 0.15s ease, transform 0.14s ease;
+    }
+
+    .btn-primary:hover { filter: brightness(1.08); }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .btn-secondary {
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .menu-manage-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .manage-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto auto auto;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .manage-title-box {
+      min-width: 0;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: calc(var(--radius) * 0.75);
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .manage-title-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    .manage-thumb {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+      border-radius: 6px;
+      overflow: hidden;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .manage-thumb img, .manage-thumb svg {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .mini-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      padding: 0;
+    }
+
+    .mini-btn.danger { color: var(--danger); }
+    .mini-btn.edit { color: var(--accent); }
+
+    .manage-empty {
+      text-align: center;
+      padding: 22px 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+      border-radius: var(--radius);
+    }
+
+    .backup-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    /* Блок выбора иконки в редакторе */
+    .icon-editor-box {
+      display: grid;
+      grid-template-columns: 64px 1fr;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border-radius: var(--radius);
+    }
+
+    .icon-preview-slot {
+      width: 64px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: calc(var(--radius) * 1.15);
+      overflow: hidden;
+    }
+
+    .icon-preview-slot img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .icon-editor-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .icon-btns-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .code-textarea {
+      min-height: 200px;
+      max-height: 42dvh;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12.5px;
+      line-height: 1.45;
+      tab-size: 2;
+    }
+
+    .code-actions-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .modal-footer-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .password-card {
+      width: min(100%, 380px);
+      padding: 24px 22px;
+      border-radius: calc(var(--radius) * 1.45);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .password-desc {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .btn-ok-green {
+      background: var(--success);
+      color: var(--success-text);
+      border: none;
+      border-radius: calc(var(--radius) * 0.85);
+      padding: 12px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+    }
+
+    .lock-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 300;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+
+    .lock-screen.active { display: flex; }
+
+    .lock-error {
+      color: var(--danger);
+      font-size: 12px;
+      font-weight: 600;
+      min-height: 16px;
+    }
+
+    /* Рабочая область запущенного блока */
+    .block-workspace {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+    }
+
+    .block-workspace.open { display: flex; }
+
+    .workspace-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: max(8px, env(safe-area-inset-top)) 10px 8px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border-subtle);
+      min-height: 52px;
+      flex-shrink: 0;
+    }
+
+    .workspace-title {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: var(--text-transform);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: center;
+      flex: 1;
+    }
+
+    .workspace-btn {
+      padding: 8px 11px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .workspace-frame {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: var(--bg);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: max(20px, env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface-alt);
+      color: var(--text);
+      border: 1px solid var(--border-subtle);
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s ease, transform 0.22s ease;
+      z-index: 500;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 480px) {
+      .menu-shell { padding: 16px 12px; }
+      .modal-header { padding: 15px 16px 12px; }
+      .modal-body { padding: 14px 16px 18px; }
+      .manage-row { gap: 5px; }
+      .mini-btn { width: 29px; height: 29px; }
+      .themes-grid { grid-template-columns: repeat(2, 1fr); }
+      .icon-editor-box { grid-template-columns: 56px 1fr; }
+      .icon-preview-slot { width: 56px; height: 56px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Главное меню -->
+  <main class="menu-shell neu-raised" id="menu-shell">
+    <header class="menu-header">
+      <h1 class="menu-title" id="menu-title-display">МЕНЮ</h1>
+      <div class="menu-actions">
+        <button class="neu-btn icon-circle-btn" id="btn-password" title="Защита паролем" aria-label="Защита паролем">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7.5" cy="15.5" r="4.5"></circle>
+            <path d="m21 2-9.6 9.6"></path>
+            <path d="m15.5 7.5 3 3L22 7l-3-3"></path>
+          </svg>
+          <span class="key-active-dot" id="key-active-dot" style="display: none;"></span>
+        </button>
+
+        <button class="neu-btn icon-circle-btn" id="btn-quick-theme" title="Переключить тему" aria-label="Переключить тему">
+          <svg id="theme-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+          </svg>
+        </button>
+
+        <button class="neu-btn icon-circle-btn" id="btn-settings" title="Настройки" aria-label="Настройки">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="menu-list" id="menu-list"></section>
+  </main>
+
+  <!-- Модальное окно НАСТРОЙКИ -->
+  <div class="modal-backdrop" id="settings-modal">
+    <div class="modal-card neu-raised" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="modal-header">
+        <h2 class="modal-title" id="settings-title">НАСТРОЙКИ</h2>
+        <button class="neu-btn close-square-btn" id="close-settings" aria-label="Закрыть">✕</button>
+      </div>
+
+      <div class="tabs-bar">
+        <button class="tab-btn active" data-tab="general">Общие</button>
+        <button class="tab-btn" data-tab="items">Пункты меню</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Вкладка ОБЩИЕ -->
+        <div class="tab-panel active" id="tab-general">
+          <div class="setting-group">
+            <div class="setting-label">СТИЛЬ МЕНЮ</div>
+            <div class="style-switch-row">
+              <button type="button" class="neu-btn style-mode-btn" id="mode-btn-list" data-mode="list">☰ Список</button>
+              <button type="button" class="neu-btn style-mode-btn" id="mode-btn-icons" data-mode="icons">⊞ Иконки</button>
+            </div>
+          </div>
+
+          <div class="setting-group" id="icon-settings-block">
+            <div class="setting-label">
+              <span>РАЗМЕР ИКОНОК</span>
+              <span id="lbl-icon-size">64PX</span>
+            </div>
+            <input type="range" id="inp-icon-size" min="44" max="96" step="2" />
+
+            <div class="setting-label" style="margin-top:6px;">КОЛОНОК В СЕТКЕ</div>
+            <select id="inp-icon-cols" class="neu-inset select-input">
+              <option value="auto">Авто (под размер экрана)</option>
+              <option value="3">3 в ряд</option>
+              <option value="4">4 в ряд</option>
+              <option value="5">5 в ряд (как на скрине)</option>
+              <option value="6">6 в ряд</option>
+            </select>
+
+            <label class="check-row" style="margin-top:4px;">
+              <input type="checkbox" id="inp-show-icons-list" class="custom-check" />
+              <span>ПОКАЗЫВАТЬ ИКОНКИ В РЕЖИМЕ «СПИСОК»</span>
+            </label>
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-label">ТЕМА ОФОРМЛЕНИЯ (7 ТЕМ)</div>
+            <div class="themes-grid" id="themes-grid"></div>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label" for="inp-menu-title">ЗАГОЛОВОК МЕНЮ</label>
+            <input type="text" id="inp-menu-title" class="neu-inset text-input" placeholder="МЕНЮ" />
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-label">АКЦЕНТНЫЙ ЦВЕТ</div>
+            <div class="color-row">
+              <input type="color" id="inp-accent" class="color-swatch-input" value="#007aff" />
+              <span class="hex-value" id="lbl-accent">#007AFF</span>
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-label">
+              <span>СКРУГЛИТЬ УГЛЫ</span>
+              <span id="lbl-radius">12PX</span>
+            </div>
+            <input type="range" id="inp-radius" min="0" max="28" step="1" />
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-label">
+              <span>ГЛУБИНА 3D ТЕНИ</span>
+              <span id="lbl-shadow">5PX</span>
+            </div>
+            <input type="range" id="inp-shadow" min="0" max="14" step="1" />
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-label">
+              <span>ИНТЕНСИВНОСТЬ ТЕНИ</span>
+              <span id="lbl-intensity">100%</span>
+            </div>
+            <input type="range" id="inp-intensity" min="0" max="150" step="5" />
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label" for="inp-font">ШРИФТ</label>
+            <select id="inp-font" class="neu-inset select-input">
+              <option value="'Segoe UI', system-ui, -apple-system, sans-serif">SEGOE UI / SYSTEM</option>
+              <option value="Roboto, 'Helvetica Neue', Arial, sans-serif">ROBOTO / ARIAL</option>
+              <option value="'Trebuchet MS', Verdana, sans-serif">TREBUCHET / VERDANA</option>
+              <option value="Georgia, 'Times New Roman', serif">GEORGIA / SERIF</option>
+              <option value="ui-monospace, 'Cascadia Mono', Consolas, monospace">MONOSPACE</option>
+            </select>
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-label">
+              <span>РАЗМЕР ТЕКСТА</span>
+              <span id="lbl-font-size">18PX</span>
+            </div>
+            <input type="range" id="inp-font-size" min="12" max="26" step="1" />
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-label">
+              <span>ИНТЕРВАЛ БУКВ</span>
+              <span id="lbl-letter-spacing">0.5PX</span>
+            </div>
+            <input type="range" id="inp-letter-spacing" min="0" max="4" step="0.5" />
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-label">
+              <span>ШИРИНА МЕНЮ</span>
+              <span id="lbl-menu-width">400PX</span>
+            </div>
+            <input type="range" id="inp-menu-width" min="280" max="960" step="10" />
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-label">
+              <span>ВЫСОТА И ОТСТУПЫ ПУНКТОВ</span>
+              <span id="lbl-item-pad">15PX</span>
+            </div>
+            <input type="range" id="inp-item-pad" min="8" max="26" step="1" />
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-label">ДОПОЛНИТЕЛЬНО</div>
+            <label class="check-row">
+              <input type="checkbox" id="inp-text-shadow" class="custom-check" />
+              <span>3D ТЕНЬ ТЕКСТА (ВКЛЮЧИТЬ ТЕНЬ)</span>
+            </label>
+            <label class="check-row">
+              <input type="checkbox" id="inp-uppercase" class="custom-check" />
+              <span>ЗАГЛАВНЫЕ БУКВЫ (CAPS)</span>
+            </label>
+            <label class="check-row">
+              <input type="checkbox" id="inp-blur" class="custom-check" />
+              <span>РАЗМЫТИЕ ФОНА ОКОН (BLUR)</span>
+            </label>
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-label">РЕЗЕРВНОЕ КОПИРОВАНИЕ И СБРОС</div>
+            <div class="backup-grid">
+              <button class="neu-btn btn-secondary" id="btn-export">Экспорт JSON</button>
+              <button class="neu-btn btn-secondary" id="btn-import">Импорт JSON</button>
+              <button class="neu-btn btn-secondary" id="btn-reset-ui" style="color: var(--danger);">Сбросить вид</button>
+            </div>
+            <input type="file" id="file-import-input" accept=".json,application/json" style="display:none" />
+          </div>
+        </div>
+
+        <!-- Вкладка ПУНКТЫ МЕНЮ -->
+        <div class="tab-panel" id="tab-items">
+          <div class="items-toolbar">
+            <span class="setting-label" style="margin:0;">УПРАВЛЕНИЕ И ПОРЯДОК ПУНКТОВ</span>
+            <button class="btn-primary" id="btn-add-item">+ ДОБАВИТЬ ПУНКТ</button>
+          </div>
+
+          <div class="menu-manage-list" id="menu-manage-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно ДОБАВЛЕНИЯ / РЕДАКТИРОВАНИЯ БЛОКА -->
+  <div class="modal-backdrop" id="item-editor-modal">
+    <div class="modal-card wide neu-raised" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 class="modal-title" id="editor-modal-title">НОВЫЙ ПУНКТ МЕНЮ</h2>
+        <button class="neu-btn close-square-btn" id="close-editor" aria-label="Закрыть">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="setting-group">
+          <label class="setting-label" for="editor-item-title">НАЗВАНИЕ ПУНКТА</label>
+          <input type="text" id="editor-item-title" class="neu-inset text-input" placeholder="Например: КАЛЬКУЛЯТОР или БЛОКНОТ" />
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-label">ИКОНКА ПУНКТА (ЕСЛИ НЕТ — БУДЕТ СТАНДАРТНАЯ)</div>
+          <div class="neu-inset icon-editor-box">
+            <div class="icon-preview-slot" id="editor-icon-preview"></div>
+            <div class="icon-editor-controls">
+              <div class="icon-btns-row">
+                <button type="button" class="neu-btn btn-secondary" id="btn-upload-icon" style="padding:7px 11px; font-size:12px;">🖼 Загрузить фото / SVG</button>
+                <button type="button" class="neu-btn btn-secondary" id="btn-reset-icon" style="padding:7px 11px; font-size:12px;">Стандартная</button>
+              </div>
+              <input type="text" id="editor-icon-input" class="neu-inset text-input" style="padding:8px 10px; font-size:12px;" placeholder="URL картинки, <svg>...</svg> или эмодзи" />
+              <input type="file" id="file-icon-input" accept="image/*" style="display:none" />
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <div class="code-actions-row">
+            <label class="setting-label" for="editor-item-code" style="margin:0;">КОД БЛОКА (HTML / CSS / JS)</label>
+            <div style="display:flex; gap:8px;">
+              <button type="button" class="neu-btn btn-secondary" id="btn-paste-clipboard" style="padding:7px 11px; font-size:12px;">📋 Вставить из буфера</button>
+              <button type="button" class="neu-btn btn-secondary" id="btn-clear-code" style="padding:7px 11px; font-size:12px;">Очистить</button>
+            </div>
+          </div>
+          <textarea id="editor-item-code" class="neu-inset code-textarea" spellcheck="false" placeholder="Вставьте сюда готовый HTML-файл или фрагмент кода (HTML + <style> + <script>)..."></textarea>
+        </div>
+
+        <label class="check-row">
+          <input type="checkbox" id="editor-adapt-theme" class="custom-check" checked />
+          <span>ПРИМЕНЯТЬ ТЕМУ И ВСЕ НАСТРОЙКИ МЕНЮ ВНУТРИ БЛОКА</span>
+        </label>
+
+        <div id="editor-autosave-row" style="display:none; align-items:center; justify-content:space-between; gap:8px;">
+          <span style="font-size:12px; color:var(--text-muted);">Есть автосохранённые данные этого блока</span>
+          <button type="button" class="neu-btn btn-secondary" id="btn-clear-block-data" style="padding:6px 10px; font-size:12px; color:var(--danger);">Сбросить данные</button>
+        </div>
+
+        <div class="modal-footer-btns">
+          <button type="button" class="btn-ok-green" id="btn-save-item">СОХРАНИТЬ И ПРИМЕНИТЬ</button>
+          <button type="button" class="neu-btn btn-secondary" id="btn-cancel-editor">ОТМЕНА</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно ИМПОРТА JSON -->
+  <div class="modal-backdrop" id="import-modal">
+    <div class="modal-card neu-raised">
+      <div class="modal-header">
+        <h2 class="modal-title">ИМПОРТ КОНФИГУРАЦИИ</h2>
+        <button class="neu-btn close-square-btn" id="close-import" aria-label="Закрыть">✕</button>
+      </div>
+      <div class="modal-body">
+        <button type="button" class="neu-btn btn-secondary" id="btn-choose-json-file">📁 Выбрать файл .json</button>
+        <div class="setting-group">
+          <label class="setting-label" for="import-json-text">ИЛИ ВСТАВЬТЕ JSON ТЕКСТ</label>
+          <textarea id="import-json-text" class="neu-inset code-textarea" style="min-height:130px;" placeholder='{"settings": ...}'></textarea>
+        </div>
+        <div class="modal-footer-btns">
+          <button type="button" class="btn-ok-green" id="btn-apply-import">ЗАГРУЗИТЬ</button>
+          <button type="button" class="neu-btn btn-secondary" id="btn-cancel-import">ОТМЕНА</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно УСТАНОВКА ПАРОЛЯ -->
+  <div class="modal-backdrop" id="password-modal">
+    <div class="password-card neu-raised" role="dialog" aria-modal="true">
+      <h2 class="modal-title">УСТАНОВКА ПАРОЛЯ</h2>
+      <p class="password-desc">
+        ЗАДАЙТЕ НОВЫЙ ПАРОЛЬ ДЛЯ ЗАЩИТЫ МЕНЮ<br />(ПУСТОЕ ПОЛЕ — ОТМЕНА):
+      </p>
+      <input type="password" id="inp-new-password" class="neu-inset text-input" placeholder="Пароль" autocomplete="new-password" />
+      <div class="modal-footer-btns">
+        <button type="button" class="btn-ok-green" id="btn-save-password">OK</button>
+        <button type="button" class="neu-btn btn-secondary" id="btn-cancel-password">ОТМЕНА</button>
+      </div>
+      <div id="password-extra-actions" style="display:none; gap:8px; justify-content:center; flex-wrap:wrap;">
+        <button type="button" class="neu-btn btn-secondary" id="btn-lock-now" style="font-size:12px; padding:8px 12px;">🔒 Заблокировать</button>
+        <button type="button" class="neu-btn btn-secondary" id="btn-remove-password" style="font-size:12px; padding:8px 12px; color: var(--danger);">Удалить пароль</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Экран блокировки -->
+  <div class="lock-screen" id="lock-screen">
+    <div class="password-card neu-raised">
+      <h2 class="modal-title">МЕНЮ ЗАЩИЩЕНО</h2>
+      <p class="password-desc">ВВЕДИТЕ ПАРОЛЬ ДЛЯ ДОСТУПА:</p>
+      <input type="password" id="inp-unlock-password" class="neu-inset text-input" placeholder="Пароль" autocomplete="current-password" />
+      <div class="lock-error" id="lock-error"></div>
+      <button type="button" class="btn-ok-green" id="btn-unlock">ВОЙТИ</button>
+    </div>
+  </div>
+
+  <!-- Рабочая область запущенного блока -->
+  <section class="block-workspace" id="block-workspace">
+    <div class="workspace-topbar">
+      <button class="neu-btn workspace-btn" id="btn-back-menu">← Меню</button>
+      <div class="workspace-title" id="workspace-title">БЛОК</div>
+      <div style="display:flex; gap:6px; flex-shrink:0;">
+        <button class="neu-btn workspace-btn" id="btn-workspace-theme" title="Сменить тему">◐</button>
+        <button class="neu-btn workspace-btn" id="btn-edit-active-block" title="Редактировать блок">✎</button>
+        <button class="neu-btn workspace-btn" id="btn-reload-block" title="Перезапустить блок">↻</button>
+      </div>
+    </div>
+    <iframe
+      id="block-frame"
+      class="workspace-frame"
+      sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads allow-same-origin"
+    ></iframe>
+  </section>
+
+  <!-- Уведомление -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const STORAGE_KEY = 'custom_neu_menu_v2';
+
+      /* Реестр встроенных блоков (для наращивания прямо в коде) */
+      const BUILTIN_BLOCKS = {};
+
+      /* 7 тем оформления */
+      const THEMES = {
+        dark: {
+          name: 'Тёмная',
+          isDark: true,
+          bg: '#181c23',
+          surface: '#202630',
+          surfaceAlt: '#262d39',
+          inputBg: '#191e26',
+          text: '#eef2f7',
+          textMuted: '#8d99ab',
+          border: 'rgba(255, 255, 255, 0.05)',
+          lightRgb: '255, 255, 255',
+          lightAlpha: 0.055,
+          darkRgb: '0, 0, 0',
+          darkAlpha: 0.58,
+          defaultAccent: '#007aff'
+        },
+        light: {
+          name: 'Светлая',
+          isDark: false,
+          bg: '#e5ebf2',
+          surface: '#e8edf4',
+          surfaceAlt: '#dfe6ef',
+          inputBg: '#dde4ed',
+          text: '#283344',
+          textMuted: '#68778c',
+          border: 'rgba(255, 255, 255, 0.65)',
+          lightRgb: '255, 255, 255',
+          lightAlpha: 0.9,
+          darkRgb: '166, 179, 198',
+          darkAlpha: 0.72,
+          defaultAccent: '#007aff'
+        },
+        ocean: {
+          name: 'Океан',
+          isDark: true,
+          bg: '#101d2b',
+          surface: '#162739',
+          surfaceAlt: '#1c3147',
+          inputBg: '#101e2c',
+          text: '#e3f1ff',
+          textMuted: '#7ea2c4',
+          border: 'rgba(120, 195, 255, 0.08)',
+          lightRgb: '110, 185, 255',
+          lightAlpha: 0.08,
+          darkRgb: '4, 10, 18',
+          darkAlpha: 0.68,
+          defaultAccent: '#00b4d8'
+        },
+        emerald: {
+          name: 'Изумруд',
+          isDark: true,
+          bg: '#101e1a',
+          surface: '#162822',
+          surfaceAlt: '#1c332c',
+          inputBg: '#101f1a',
+          text: '#e3f7ee',
+          textMuted: '#81ab9a',
+          border: 'rgba(110, 240, 185, 0.08)',
+          lightRgb: '110, 235, 180',
+          lightAlpha: 0.07,
+          darkRgb: '3, 12, 9',
+          darkAlpha: 0.68,
+          defaultAccent: '#10b981'
+        },
+        amethyst: {
+          name: 'Аметист',
+          isDark: true,
+          bg: '#191424',
+          surface: '#221b30',
+          surfaceAlt: '#2a223b',
+          inputBg: '#181322',
+          text: '#f1ebff',
+          textMuted: '#9e8ec2',
+          border: 'rgba(200, 165, 255, 0.08)',
+          lightRgb: '195, 155, 255',
+          lightAlpha: 0.075,
+          darkRgb: '8, 5, 16',
+          darkAlpha: 0.68,
+          defaultAccent: '#a855f7'
+        },
+        sand: {
+          name: 'Песок',
+          isDark: false,
+          bg: '#ebe4da',
+          surface: '#efe9e0',
+          surfaceAlt: '#e4dcd0',
+          inputBg: '#e2d9cd',
+          text: '#3c3328',
+          textMuted: '#7c6f5e',
+          border: 'rgba(255, 252, 245, 0.65)',
+          lightRgb: '255, 252, 246',
+          lightAlpha: 0.92,
+          darkRgb: '185, 173, 156',
+          darkAlpha: 0.7,
+          defaultAccent: '#d97706'
+        },
+        cyber: {
+          name: 'Графит',
+          isDark: true,
+          bg: '#101114',
+          surface: '#17181d',
+          surfaceAlt: '#1e2027',
+          inputBg: '#111216',
+          text: '#f4f4f8',
+          textMuted: '#858899',
+          border: 'rgba(255, 255, 255, 0.06)',
+          lightRgb: '255, 255, 255',
+          lightAlpha: 0.05,
+          darkRgb: '0, 0, 0',
+          darkAlpha: 0.78,
+          defaultAccent: '#f43f5e'
+        }
+      };
+
+      const DEFAULT_SETTINGS = {
+        theme: 'dark',
+        menuStyle: 'list', // 'list' | 'icons'
+        iconSize: 64,
+        iconCols: 'auto',
+        showIconsInList: false,
+        menuTitle: 'МЕНЮ',
+        accent: '#007aff',
+        radius: 12,
+        shadowDepth: 5,
+        shadowIntensity: 100,
+        fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
+        fontSize: 18,
+        letterSpacing: 0.5,
+        menuWidth: 400,
+        itemPadY: 15,
+        textShadow: false,
+        uppercase: true,
+        backdropBlur: true
+      };
+
+      let state = {
+        settings: { ...DEFAULT_SETTINGS },
+        items: [],
+        blockData: {}, // Автосохранение состояний всех блоков
+        passwordHash: ''
+      };
+
+      let editingItemId = null;
+      let editorIconValue = '';
+      let activeBlockId = null;
+      let toastTimer = null;
+
+      const $ = (id) => document.getElementById(id);
+      const root = document.documentElement;
+
+      /* Стандартная SVG-иконка (когда пользователь не задал свою) */
+      const DEFAULT_ICON_HTML = `
+        <div class="default-app-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="2"></rect>
+            <rect x="14" y="3" width="7" height="7" rx="2"></rect>
+            <rect x="3" y="14" width="7" height="7" rx="2"></rect>
+            <rect x="14" y="14" width="7" height="7" rx="2"></rect>
+          </svg>
+        </div>
+      `;
+
+      function simpleHash(str) {
+        let h1 = 0xdeadbeef ^ str.length;
+        let h2 = 0x41c6ce57 ^ str.length;
+        for (let i = 0; i < str.length; i++) {
+          const ch = str.charCodeAt(i);
+          h1 = Math.imul(h1 ^ ch, 2654435761);
+          h2 = Math.imul(h2 ^ ch, 1597334677);
+        }
+        h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+        h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+        return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+      }
+
+      function showToast(message) {
+        const el = $('toast');
+        el.textContent = message;
+        el.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove('show'), 2300);
+      }
+
+      function loadState() {
+        try {
+          /* Миграция из v1 при наличии */
+          const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('custom_neu_menu_v1');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed.settings) state.settings = { ...DEFAULT_SETTINGS, ...parsed.settings };
+            if (Array.isArray(parsed.items)) state.items = parsed.items;
+            if (parsed.blockData && typeof parsed.blockData === 'object') state.blockData = parsed.blockData;
+            if (typeof parsed.passwordHash === 'string') state.passwordHash = parsed.passwordHash;
+          }
+        } catch (e) {
+          console.warn('Ошибка чтения localStorage:', e);
+        }
+
+        Object.keys(BUILTIN_BLOCKS).forEach((key) => {
+          const exists = state.items.some((it) => it.builtinKey === key);
+          if (!exists) {
+            state.items.push({
+              id: 'builtin_' + key,
+              builtinKey: key,
+              title: BUILTIN_BLOCKS[key].title || key.toUpperCase(),
+              icon: BUILTIN_BLOCKS[key].icon || '',
+              code: BUILTIN_BLOCKS[key].code || '',
+              visible: true,
+              adaptTheme: true
+            });
+          }
+        });
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (e) {
+          console.warn('Ошибка сохранения:', e);
+          showToast('Не удалось сохранить в память браузера');
+        }
+      }
+
+      function getContrastText(hex) {
+        const clean = hex.replace('#', '');
+        const r = parseInt(clean.substring(0, 2), 16) || 0;
+        const g = parseInt(clean.substring(2, 4), 16) || 0;
+        const b = parseInt(clean.substring(4, 6), 16) || 0;
+        const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+        return yiq >= 155 ? '#111827' : '#ffffff';
+      }
+
+      function computeThemeTokens() {
+        const s = state.settings;
+        const theme = THEMES[s.theme] || THEMES.dark;
+        const intensity = (s.shadowIntensity ?? 100) / 100;
+        const lightA = Math.min(1, theme.lightAlpha * intensity).toFixed(3);
+        const darkA = Math.min(1, theme.darkAlpha * intensity).toFixed(3);
+        const ts = s.textShadow
+          ? (theme.isDark
+              ? '1px 1px 2px rgba(0,0,0,0.85), -1px -1px 1px rgba(255,255,255,0.08)'
+              : '1px 1px 1px rgba(255,255,255,0.9), -1px -1px 1px rgba(0,0,0,0.12)')
+          : 'none';
+
+        return {
+          '--bg': theme.bg,
+          '--surface': theme.surface,
+          '--surface-alt': theme.surfaceAlt,
+          '--input-bg': theme.inputBg,
+          '--text': theme.text,
+          '--text-muted': theme.textMuted,
+          '--border-subtle': theme.border,
+          '--shadow-light': `rgba(${theme.lightRgb}, ${lightA})`,
+          '--shadow-dark': `rgba(${theme.darkRgb}, ${darkA})`,
+          '--accent': s.accent,
+          '--accent-contrast': getContrastText(s.accent),
+          '--radius': s.radius + 'px',
+          '--shadow-depth': s.shadowDepth + 'px',
+          '--shadow-blur': Math.max(2, s.shadowDepth * 2.4) + 'px',
+          '--font-family': s.fontFamily,
+          '--font-size': s.fontSize + 'px',
+          '--letter-spacing': s.letterSpacing + 'px',
+          '--text-transform': s.uppercase ? 'uppercase' : 'none',
+          '--text-shadow': ts,
+          '--item-pad-y': s.itemPadY + 'px',
+          '--item-gap': Math.max(8, Math.round(s.itemPadY * 0.78)) + 'px'
+        };
+      }
+
+      function updateSliderTrack(slider) {
+        const min = parseFloat(slider.min) || 0;
+        const max = parseFloat(slider.max) || 100;
+        const val = parseFloat(slider.value) || 0;
+        const pct = ((val - min) / (max - min)) * 100;
+        slider.style.setProperty('--pct', pct + '%');
+      }
+
+      /* Применение всех настроек и передача их в открытый блок в реальном времени */
+      function applySettings() {
+        const s = state.settings;
+        const theme = THEMES[s.theme] || THEMES.dark;
+        const tokens = computeThemeTokens();
+
+        Object.entries(tokens).forEach(([k, v]) => root.style.setProperty(k, v));
+
+        root.style.setProperty('--menu-width', s.menuWidth + 'px');
+        root.style.setProperty('--icon-size', s.iconSize + 'px');
+        root.style.setProperty('--icon-cols', s.iconCols);
+        root.style.setProperty('--backdrop-blur', s.backdropBlur ? '8px' : '0px');
+
+        $('menu-title-display').textContent = s.menuTitle.trim() || 'МЕНЮ';
+        $('key-active-dot').style.display = state.passwordHash ? 'block' : 'none';
+
+        const iconEl = $('theme-toggle-icon');
+        if (theme.isDark) {
+          iconEl.innerHTML = '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>';
+        } else {
+          iconEl.innerHTML = '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>';
+        }
+
+        /* Обновление стиля активного блока без перезагрузки */
+        const frame = $('block-frame');
+        if ($('block-workspace').classList.contains('open') && frame.contentWindow) {
+          try {
+            frame.contentWindow.postMessage({ type: 'menu-theme-update', tokens, themeName: s.theme, isDark: theme.isDark }, '*');
+          } catch (e) {}
+        }
+      }
+
+      function syncSettingsControls() {
+        const s = state.settings;
+
+        $('mode-btn-list').classList.toggle('active', s.menuStyle !== 'icons');
+        $('mode-btn-icons').classList.toggle('active', s.menuStyle === 'icons');
+
+        $('inp-icon-size').value = s.iconSize;
+        $('lbl-icon-size').textContent = s.iconSize + 'PX';
+        $('inp-icon-cols').value = s.iconCols;
+        $('inp-show-icons-list').checked = !!s.showIconsInList;
+
+        $('inp-menu-title').value = s.menuTitle;
+        $('inp-accent').value = s.accent;
+        $('lbl-accent').textContent = s.accent.toUpperCase();
+
+        $('inp-radius').value = s.radius;
+        $('lbl-radius').textContent = s.radius + 'PX';
+
+        $('inp-shadow').value = s.shadowDepth;
+        $('lbl-shadow').textContent = s.shadowDepth + 'PX';
+
+        $('inp-intensity').value = s.shadowIntensity;
+        $('lbl-intensity').textContent = s.shadowIntensity + '%';
+
+        $('inp-font').value = s.fontFamily;
+
+        $('inp-font-size').value = s.fontSize;
+        $('lbl-font-size').textContent = s.fontSize + 'PX';
+
+        $('inp-letter-spacing').value = s.letterSpacing;
+        $('lbl-letter-spacing').textContent = s.letterSpacing + 'PX';
+
+        $('inp-menu-width').value = s.menuWidth;
+        $('lbl-menu-width').textContent = s.menuWidth + 'PX';
+
+        $('inp-item-pad').value = s.itemPadY;
+        $('lbl-item-pad').textContent = s.itemPadY + 'PX';
+
+        $('inp-text-shadow').checked = !!s.textShadow;
+        $('inp-uppercase').checked = !!s.uppercase;
+        $('inp-blur').checked = !!s.backdropBlur;
+
+        document.querySelectorAll('#tab-general input[type="range"]').forEach(updateSliderTrack);
+        renderThemesGrid();
+      }
+
+      function renderThemesGrid() {
+        const grid = $('themes-grid');
+        grid.innerHTML = '';
+        Object.entries(THEMES).forEach(([key, theme]) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'neu-btn theme-chip' + (state.settings.theme === key ? ' active' : '');
+          btn.innerHTML = `<span class="theme-dot" style="background: linear-gradient(135deg, ${theme.surface} 55%, ${theme.defaultAccent} 55%);"></span><span>${theme.name}</span>`;
+          btn.addEventListener('click', () => {
+            state.settings.theme = key;
+            applySettings();
+            saveState();
+            renderThemesGrid();
+          });
+          grid.appendChild(btn);
+        });
+      }
+
+      /* Безопасный рендер иконки (картинка / SVG / эмодзи / стандартная) */
+      function normalizeIconSource(raw) {
+        const val = (raw || '').trim();
+        if (!val) return { type: 'default' };
+        if (/^<svg[\s>]/i.test(val)) {
+          return { type: 'img', src: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(val) };
+        }
+        if (/^(data:image\/|https?:\/\/|blob:|\/|\.\.?\/)/i.test(val)) {
+          return { type: 'img', src: val };
+        }
+        return { type: 'emoji', text: val };
+      }
+
+      function createIconElement(rawIcon, isListCompact) {
+        const info = normalizeIconSource(rawIcon);
+        if (info.type === 'img') {
+          const img = document.createElement('img');
+          img.src = info.src;
+          img.alt = '';
+          img.loading = 'lazy';
+          img.onerror = () => {
+            if (img.parentNode) img.parentNode.innerHTML = DEFAULT_ICON_HTML;
+          };
+          return img;
+        }
+        if (info.type === 'emoji') {
+          const span = document.createElement('span');
+          span.className = 'tile-icon-emoji';
+          if (isListCompact) span.style.fontSize = '20px';
+          span.textContent = info.text;
+          return span;
+        }
+        const wrap = document.createElement('div');
+        wrap.style.width = '100%';
+        wrap.style.height = '100%';
+        wrap.innerHTML = DEFAULT_ICON_HTML;
+        return wrap.firstElementChild;
+      }
+
+      /* Отрисовка главного меню (Список или Иконки) */
+      function renderMenu() {
+        const list = $('menu-list');
+        const s = state.settings;
+        const isIconsMode = s.menuStyle === 'icons';
+
+        list.innerHTML = '';
+        list.className = 'menu-list' + (isIconsMode ? ' mode-icons' : '');
+        if (isIconsMode && s.iconCols !== 'auto') {
+          list.classList.add('fixed-cols');
+        }
+
+        const visibleItems = state.items.filter((it) => it.visible !== false);
+
+        if (visibleItems.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'empty-menu-state neu-inset';
+          empty.innerHTML = `
+            <p>Меню пока пусто.<br>Добавьте первый блок через настройки или вставьте готовый код.</p>
+            <button type="button" class="neu-btn empty-add-btn" id="btn-empty-add">+ Добавить блок</button>
+          `;
+          list.appendChild(empty);
+          empty.querySelector('#btn-empty-add').addEventListener('click', () => openItemEditor(null));
+          return;
+        }
+
+        if (isIconsMode) {
+          visibleItems.forEach((item) => {
+            const tile = document.createElement('button');
+            tile.type = 'button';
+            tile.className = 'menu-icon-tile';
+            tile.title = item.title || 'БЛОК';
+
+            const box = document.createElement('div');
+            box.className = 'tile-icon-box';
+            box.appendChild(createIconElement(item.icon, false));
+
+            const label = document.createElement('span');
+            label.className = 'tile-label';
+            label.textContent = item.title || 'БЛОК';
+
+            tile.append(box, label);
+            tile.addEventListener('click', () => launchBlock(item.id));
+            list.appendChild(tile);
+          });
+        } else {
+          visibleItems.forEach((item) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'neu-btn menu-item-btn';
+
+            const left = document.createElement('span');
+            left.className = 'menu-item-left';
+
+            if (s.showIconsInList) {
+              const iconWrap = document.createElement('span');
+              iconWrap.className = 'list-item-icon';
+              iconWrap.appendChild(createIconElement(item.icon, true));
+              left.appendChild(iconWrap);
+            }
+
+            const txt = document.createElement('span');
+            txt.textContent = item.title || 'БЕЗ НАЗВАНИЯ';
+            left.appendChild(txt);
+
+            btn.appendChild(left);
+            btn.addEventListener('click', () => launchBlock(item.id));
+            list.appendChild(btn);
+          });
+        }
+      }
+
+      /* Список управления пунктами */
+      function renderManageList() {
+        const container = $('menu-manage-list');
+        container.innerHTML = '';
+
+        if (state.items.length === 0) {
+          container.innerHTML = '<div class="manage-empty neu-inset">Список пуст. Нажмите «+ ДОБАВИТЬ ПУНКТ», чтобы вставить код нового блока.</div>';
+          return;
+        }
+
+        state.items.forEach((item, index) => {
+          const row = document.createElement('div');
+          row.className = 'manage-row';
+
+          const titleBox = document.createElement('button');
+          titleBox.type = 'button';
+          titleBox.className = 'neu-inset manage-title-box';
+          titleBox.title = 'Нажмите, чтобы редактировать пункт, иконку и код';
+
+          const thumb = document.createElement('span');
+          thumb.className = 'manage-thumb';
+          thumb.appendChild(createIconElement(item.icon, true));
+
+          const titleSpan = document.createElement('span');
+          titleSpan.className = 'manage-title-text';
+          titleSpan.textContent = item.title || 'БЕЗ НАЗВАНИЯ';
+
+          titleBox.append(thumb, titleSpan);
+          titleBox.addEventListener('click', () => openItemEditor(item.id));
+
+          const chk = document.createElement('input');
+          chk.type = 'checkbox';
+          chk.className = 'custom-check';
+          chk.checked = item.visible !== false;
+          chk.title = 'Показывать в меню';
+          chk.addEventListener('change', () => {
+            item.visible = chk.checked;
+            saveState();
+            renderMenu();
+          });
+
+          const editBtn = document.createElement('button');
+          editBtn.type = 'button';
+          editBtn.className = 'neu-btn mini-btn edit';
+          editBtn.innerHTML = '✎';
+          editBtn.title = 'Редактировать';
+          editBtn.addEventListener('click', () => openItemEditor(item.id));
+
+          const upBtn = document.createElement('button');
+          upBtn.type = 'button';
+          upBtn.className = 'neu-btn mini-btn';
+          upBtn.innerHTML = '▲';
+          upBtn.disabled = index === 0;
+          upBtn.title = 'Выше';
+          upBtn.addEventListener('click', () => moveItem(index, -1));
+
+          const downBtn = document.createElement('button');
+          downBtn.type = 'button';
+          downBtn.className = 'neu-btn mini-btn';
+          downBtn.innerHTML = '▼';
+          downBtn.disabled = index === state.items.length - 1;
+          downBtn.title = 'Ниже';
+          downBtn.addEventListener('click', () => moveItem(index, 1));
+
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.className = 'neu-btn mini-btn danger';
+          delBtn.innerHTML = '✕';
+          delBtn.title = 'Удалить';
+          delBtn.addEventListener('click', () => {
+            if (confirm(`Удалить пункт «${item.title}»?`)) {
+              delete state.blockData[item.id];
+              state.items.splice(index, 1);
+              saveState();
+              renderManageList();
+              renderMenu();
+            }
+          });
+
+          row.append(titleBox, chk, editBtn, upBtn, downBtn, delBtn);
+          container.appendChild(row);
+        });
+      }
+
+      function moveItem(index, delta) {
+        const target = index + delta;
+        if (target < 0 || target >= state.items.length) return;
+        const [moved] = state.items.splice(index, 1);
+        state.items.splice(target, 0, moved);
+        saveState();
+        renderManageList();
+        renderMenu();
+      }
+
+      /* Редактор пункта и иконки */
+      function updateEditorIconPreview() {
+        const slot = $('editor-icon-preview');
+        slot.innerHTML = '';
+        slot.appendChild(createIconElement(editorIconValue, false));
+      }
+
+      function openItemEditor(itemId) {
+        editingItemId = itemId;
+        const item = itemId ? state.items.find((it) => it.id === itemId) : null;
+
+        $('editor-modal-title').textContent = item ? 'РЕДАКТИРОВАТЬ ПУНКТ' : 'НОВЫЙ ПУНКТ МЕНЮ';
+        $('editor-item-title').value = item ? item.title : '';
+        $('editor-item-code').value = item ? item.code : '';
+        $('editor-adapt-theme').checked = item ? item.adaptTheme !== false : true;
+
+        editorIconValue = item && item.icon ? item.icon : '';
+        $('editor-icon-input').value = editorIconValue.startsWith('data:image/') ? '' : editorIconValue;
+        updateEditorIconPreview();
+
+        const hasAutosave = item && state.blockData[item.id] && (
+          (state.blockData[item.id].fields && Object.keys(state.blockData[item.id].fields).length > 0) ||
+          (state.blockData[item.id].custom && Object.keys(state.blockData[item.id].custom).length > 0)
+        );
+        $('editor-autosave-row').style.display = hasAutosave ? 'flex' : 'none';
+
+        $('item-editor-modal').classList.add('open');
+        setTimeout(() => (item ? $('editor-item-code') : $('editor-item-title')).focus(), 60);
+      }
+
+      function closeItemEditor() {
+        $('item-editor-modal').classList.remove('open');
+        editingItemId = null;
+      }
+
+      function saveEditedItem() {
+        const title = $('editor-item-title').value.trim() || 'НОВЫЙ БЛОК';
+        const code = $('editor-item-code').value;
+        const adaptTheme = $('editor-adapt-theme').checked;
+
+        if (!code.trim()) {
+          showToast('Вставьте код блока в текстовое поле');
+          $('editor-item-code').focus();
+          return;
+        }
+
+        if (editingItemId) {
+          const item = state.items.find((it) => it.id === editingItemId);
+          if (item) {
+            item.title = title;
+            item.icon = editorIconValue;
+            item.code = code;
+            item.adaptTheme = adaptTheme;
+          }
+          showToast('Пункт обновлён');
+        } else {
+          const newItem = {
+            id: 'blk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            title,
+            icon: editorIconValue,
+            code,
+            visible: true,
+            adaptTheme
+          };
+          state.items.push(newItem);
+          showToast('Пункт добавлен в меню');
+        }
+
+        saveState();
+        renderManageList();
+        renderMenu();
+        closeItemEditor();
+
+        if (activeBlockId && $('block-workspace').classList.contains('open')) {
+          launchBlock(activeBlockId);
+        }
+      }
+
+      /* Сжатие загруженной иконки с сохранением прозрачности */
+      function processIconFile(file) {
+        if (!file) return;
+        if (file.type === 'image/svg+xml' && file.size < 45000) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            editorIconValue = reader.result || '';
+            $('editor-icon-input').value = '';
+            updateEditorIconPreview();
+            showToast('SVG-иконка загружена');
+          };
+          reader.readAsDataURL(file);
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const maxDim = 192;
+            const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+            const w = Math.max(1, Math.round(img.width * scale));
+            const h = Math.max(1, Math.round(img.height * scale));
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            editorIconValue = canvas.toDataURL('image/png');
+            $('editor-icon-input').value = '';
+            updateEditorIconPreview();
+            showToast('Иконка загружена');
+          };
+          img.onerror = () => showToast('Не удалось прочитать изображение');
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      /* Построение изолированного блока с полной темой + автосохранением */
+      function buildBlockSrcdoc(item) {
+        const s = state.settings;
+        const theme = THEMES[s.theme] || THEMES.dark;
+        const tokens = computeThemeTokens();
+        const code = item.code || '';
+        const adapt = item.adaptTheme !== false;
+        const savedData = state.blockData[item.id] || { fields: {}, custom: {} };
+
+        const tokensCss = Object.entries(tokens).map(([k, v]) => `${k}: ${v};`).join('\n      ');
+
+        const safeTokensJson = JSON.stringify(tokens).replace(/</g, '\\u003c');
+        const safeSavedJson = JSON.stringify(savedData).replace(/</g, '\\u003c');
+        const safeBlockId = JSON.stringify(item.id).replace(/</g, '\\u003c');
+
+        const bridgeStyle = `
+  <style id="menu-theme-bridge">
+    :root {
+      ${tokensCss}
+    }
+    ${adapt ? `
+    :where(*, *::before, *::after) { box-sizing: border-box; }
+    :where(html, body) {
+      margin: 0;
+      padding: 14px;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-family);
+      font-size: var(--font-size);
+      letter-spacing: var(--letter-spacing);
+    }
+    :where(h1, h2, h3, h4) {
+      color: var(--text);
+      text-transform: var(--text-transform);
+      text-shadow: var(--text-shadow);
+      letter-spacing: var(--letter-spacing);
+    }
+    :where(a) { color: var(--accent); }
+    :where(button, .btn, input[type="button"], input[type="submit"], input[type="reset"]) {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-family: var(--font-family);
+      font-size: max(13px, calc(var(--font-size) * 0.85));
+      letter-spacing: var(--letter-spacing);
+      text-transform: var(--text-transform);
+      text-shadow: var(--text-shadow);
+      cursor: pointer;
+      box-shadow:
+        calc(var(--shadow-depth) * -0.65) calc(var(--shadow-depth) * -0.65) calc(var(--shadow-blur) * 0.75) var(--shadow-light),
+        calc(var(--shadow-depth) * 0.75) calc(var(--shadow-depth) * 0.75) calc(var(--shadow-blur) * 0.8) var(--shadow-dark);
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    :where(button, .btn, input[type="button"], input[type="submit"]):active {
+      transform: scale(0.98);
+      box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -2px -2px 5px var(--shadow-light);
+    }
+    :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]), textarea, select) {
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1px solid var(--border-subtle);
+      border-radius: calc(var(--radius) * 0.85);
+      padding: 10px 12px;
+      font-family: var(--font-family);
+      font-size: max(14px, calc(var(--font-size) * 0.85));
+      box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -2px -2px 5px var(--shadow-light);
+      outline: none;
+    }
+    :where(input[type="checkbox"], input[type="radio"], input[type="range"]) {
+      accent-color: var(--accent);
+    }
+    :where(.card, .panel, .box) {
+      background: var(--surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: calc(var(--radius) * 1.25);
+      padding: 16px;
+      box-shadow:
+        calc(var(--shadow-depth) * -0.8) calc(var(--shadow-depth) * -0.8) var(--shadow-blur) var(--shadow-light),
+        var(--shadow-depth) var(--shadow-depth) var(--shadow-blur) var(--shadow-dark);
+    }` : ''}
+  </style>`;
+
+        const bridgeScript = `
+  <script id="menu-autosave-bridge">
+  (function() {
+    var BLOCK_ID = ${safeBlockId};
+    var saved = ${safeSavedJson};
+    if (!saved || typeof saved !== 'object') saved = {};
+    if (!saved.fields || typeof saved.fields !== 'object') saved.fields = {};
+    if (!saved.custom || typeof saved.custom !== 'object') saved.custom = {};
+
+    window.MENU_THEME = ${safeTokensJson};
+
+    /* API для кастомного хранения сложных данных внутри блока */
+    window.BlockState = {
+      get: function(key, defVal) {
+        return Object.prototype.hasOwnProperty.call(saved.custom, key) ? saved.custom[key] : defVal;
+      },
+      set: function(key, val) {
+        saved.custom[key] = val;
+        scheduleSave();
+      },
+      remove: function(key) {
+        delete saved.custom[key];
+        scheduleSave();
+      },
+      all: function() { return saved.custom; }
+    };
+
+    function getFieldKey(el, counters) {
+      if (el.id) return 'id:' + el.id;
+      var tag = el.tagName;
+      if (el.type === 'radio' && el.name) return 'radio:' + el.name;
+      if (el.name) {
+        var nk = 'name:' + el.name;
+        counters[nk] = (counters[nk] || 0) + 1;
+        return nk + '#' + counters[nk];
+      }
+      var tk = 'tag:' + tag;
+      counters[tk] = (counters[tk] || 0) + 1;
+      return tk + '#' + counters[tk];
+    }
+
+    function isTrackable(el) {
+      if (!el || el.dataset && el.dataset.noAutosave !== undefined) return false;
+      if (el.isContentEditable) return true;
+      var tag = el.tagName;
+      if (tag === 'TEXTAREA' || tag === 'SELECT') return true;
+      if (tag === 'INPUT') {
+        var t = (el.type || 'text').toLowerCase();
+        return t !== 'password' && t !== 'file' && t !== 'button' && t !== 'submit' && t !== 'reset';
+      }
+      return false;
+    }
+
+    function collectFields() {
+      var counters = {};
+      var fields = {};
+      var nodes = document.querySelectorAll('input, textarea, select, [contenteditable="true"], [contenteditable=""]');
+      for (var i = 0; i < nodes.length; i++) {
+        var el = nodes[i];
+        if (!isTrackable(el)) continue;
+        var key = getFieldKey(el, counters);
+        if (el.isContentEditable) {
+          fields[key] = el.innerHTML;
+        } else if (el.type === 'checkbox') {
+          fields[key] = !!el.checked;
+        } else if (el.type === 'radio') {
+          if (el.checked) fields[key] = el.value;
+        } else {
+          fields[key] = el.value;
+        }
+      }
+      saved.fields = fields;
+    }
+
+    var restoredKeys = {};
+    function restoreFields() {
+      if (!saved.fields) return;
+      var counters = {};
+      var nodes = document.querySelectorAll('input, textarea, select, [contenteditable="true"], [contenteditable=""]');
+      for (var i = 0; i < nodes.length; i++) {
+        var el = nodes[i];
+        if (!isTrackable(el)) continue;
+        var key = getFieldKey(el, counters);
+        if (restoredKeys[key]) continue;
+        if (!Object.prototype.hasOwnProperty.call(saved.fields, key)) continue;
+
+        restoredKeys[key] = true;
+        var val = saved.fields[key];
+        if (el.isContentEditable) {
+          if (el.innerHTML !== val) el.innerHTML = val;
+        } else if (el.type === 'checkbox') {
+          el.checked = !!val;
+        } else if (el.type === 'radio') {
+          el.checked = (el.value === val);
+        } else {
+          el.value = val;
+        }
+      }
+    }
+
+    var saveTimer = null;
+    function pushSave() {
+      collectFields();
+      saved.updatedAt = Date.now();
+      try {
+        window.parent.postMessage({ type: 'block-autosave', blockId: BLOCK_ID, data: saved }, '*');
+      } catch (e) {}
+    }
+
+    function scheduleSave() {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(pushSave, 180);
+    }
+
+    window.__neuFlushAutosave = function() {
+      clearTimeout(saveTimer);
+      pushSave();
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+      restoreFields();
+      setTimeout(restoreFields, 80);
+
+      var obs = new MutationObserver(function(muts) {
+        for (var i = 0; i < muts.length; i++) {
+          var t = muts[i].target;
+          if (t && t.isContentEditable) { scheduleSave(); break; }
+        }
+      });
+      if (document.body) {
+        obs.observe(document.body, { subtree: true, characterData: true, childList: true });
+      }
+    });
+
+    window.addEventListener('load', restoreFields);
+    document.addEventListener('input', scheduleSave, true);
+    document.addEventListener('change', scheduleSave, true);
+    window.addEventListener('pagehide', window.__neuFlushAutosave);
+    window.addEventListener('beforeunload', window.__neuFlushAutosave);
+
+    /* Живое обновление темы и настроек от родительского Меню */
+    window.addEventListener('message', function(e) {
+      if (!e.data) return;
+      if (e.data.type === 'menu-theme-update' && e.data.tokens) {
+        window.MENU_THEME = e.data.tokens;
+        var docStyle = document.documentElement.style;
+        var keys = Object.keys(e.data.tokens);
+        for (var i = 0; i < keys.length; i++) {
+          docStyle.setProperty(keys[i], e.data.tokens[keys[i]]);
+        }
+        if (typeof window.onMenuThemeChange === 'function') {
+          window.onMenuThemeChange(e.data.tokens, e.data);
+        }
+      } else if (e.data.type === 'flush-autosave') {
+        window.__neuFlushAutosave();
+      }
+    });
+  })();
+  <\/script>`;
+
+        const isFullDoc = /<\s*!doctype|<\s*html[\s>]/i.test(code);
+        if (isFullDoc) {
+          if (/<\s*head[\s>]/i.test(code)) {
+            return code.replace(/<\s*head([^>]*)>/i, `<head$1>\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">${bridgeStyle}${bridgeScript}`);
+          }
+          return bridgeStyle + bridgeScript + code;
+        }
+
+        return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  ${bridgeStyle}
+  ${bridgeScript}
+</head>
+<body>
+${code}
+</body>
+</html>`;
+      }
+
+      function launchBlock(itemId) {
+        const item = state.items.find((it) => it.id === itemId);
+        if (!item) return;
+
+        activeBlockId = item.id;
+        $('workspace-title').textContent = item.title || 'БЛОК';
+        $('block-frame').srcdoc = buildBlockSrcdoc(item);
+        $('block-workspace').classList.add('open');
+      }
+
+      function flushActiveBlock() {
+        const frame = $('block-frame');
+        if (frame && frame.contentWindow) {
+          try {
+            if (typeof frame.contentWindow.__neuFlushAutosave === 'function') {
+              frame.contentWindow.__neuFlushAutosave();
+            } else {
+              frame.contentWindow.postMessage({ type: 'flush-autosave' }, '*');
+            }
+          } catch (e) {}
+        }
+      }
+
+      function closeBlockWorkspace() {
+        flushActiveBlock();
+        $('block-workspace').classList.remove('open');
+        $('block-frame').srcdoc = '';
+        activeBlockId = null;
+      }
+
+      function cycleTheme(showNotice = true) {
+        const keys = Object.keys(THEMES);
+        const idx = keys.indexOf(state.settings.theme);
+        const nextKey = keys[(idx + 1) % keys.length];
+        state.settings.theme = nextKey;
+        applySettings();
+        saveState();
+        if ($('settings-modal').classList.contains('open')) {
+          renderThemesGrid();
+        }
+        if (showNotice) showToast('Тема: ' + THEMES[nextKey].name);
+      }
+
+      function bindEvents() {
+        /* Настройки */
+        $('btn-settings').addEventListener('click', () => {
+          syncSettingsControls();
+          renderManageList();
+          $('settings-modal').classList.add('open');
+        });
+
+        $('close-settings').addEventListener('click', () => $('settings-modal').classList.remove('open'));
+        $('settings-modal').addEventListener('click', (e) => {
+          if (e.target === $('settings-modal')) $('settings-modal').classList.remove('open');
+        });
+
+        document.querySelectorAll('.tab-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+            btn.classList.add('active');
+            $('tab-' + btn.dataset.tab).classList.add('active');
+          });
+        });
+
+        $('btn-quick-theme').addEventListener('click', () => cycleTheme(true));
+        $('btn-workspace-theme').addEventListener('click', () => cycleTheme(true));
+
+        /* Переключатель стиля меню (Список / Иконки) */
+        const setMenuStyle = (mode) => {
+          state.settings.menuStyle = mode;
+          syncSettingsControls();
+          applySettings();
+          saveState();
+          renderMenu();
+        };
+        $('mode-btn-list').addEventListener('click', () => setMenuStyle('list'));
+        $('mode-btn-icons').addEventListener('click', () => setMenuStyle('icons'));
+
+        $('inp-icon-cols').addEventListener('change', (e) => {
+          state.settings.iconCols = e.target.value;
+          applySettings();
+          saveState();
+          renderMenu();
+        });
+
+        $('inp-show-icons-list').addEventListener('change', (e) => {
+          state.settings.showIconsInList = e.target.checked;
+          saveState();
+          renderMenu();
+        });
+
+        $('inp-menu-title').addEventListener('input', (e) => {
+          state.settings.menuTitle = e.target.value;
+          applySettings();
+          saveState();
+        });
+
+        $('inp-accent').addEventListener('input', (e) => {
+          state.settings.accent = e.target.value;
+          $('lbl-accent').textContent = e.target.value.toUpperCase();
+          applySettings();
+          saveState();
+        });
+
+        const bindRange = (id, lblId, prop, unit) => {
+          const el = $(id);
+          el.addEventListener('input', () => {
+            const val = parseFloat(el.value);
+            state.settings[prop] = val;
+            $(lblId).textContent = val + unit;
+            updateSliderTrack(el);
+            applySettings();
+            saveState();
+          });
+        };
+
+        bindRange('inp-icon-size', 'lbl-icon-size', 'iconSize', 'PX');
+        bindRange('inp-radius', 'lbl-radius', 'radius', 'PX');
+        bindRange('inp-shadow', 'lbl-shadow', 'shadowDepth', 'PX');
+        bindRange('inp-intensity', 'lbl-intensity', 'shadowIntensity', '%');
+        bindRange('inp-font-size', 'lbl-font-size', 'fontSize', 'PX');
+        bindRange('inp-letter-spacing', 'lbl-letter-spacing', 'letterSpacing', 'PX');
+        bindRange('inp-menu-width', 'lbl-menu-width', 'menuWidth', 'PX');
+        bindRange('inp-item-pad', 'lbl-item-pad', 'itemPadY', 'PX');
+
+        $('inp-font').addEventListener('change', (e) => {
+          state.settings.fontFamily = e.target.value;
+          applySettings();
+          saveState();
+        });
+
+        $('inp-text-shadow').addEventListener('change', (e) => {
+          state.settings.textShadow = e.target.checked;
+          applySettings();
+          saveState();
+        });
+
+        $('inp-uppercase').addEventListener('change', (e) => {
+          state.settings.uppercase = e.target.checked;
+          applySettings();
+          saveState();
+        });
+
+        $('inp-blur').addEventListener('change', (e) => {
+          state.settings.backdropBlur = e.target.checked;
+          applySettings();
+          saveState();
+        });
+
+        /* Редактор пунктов и иконок */
+        $('btn-add-item').addEventListener('click', () => openItemEditor(null));
+        $('close-editor').addEventListener('click', closeItemEditor);
+        $('btn-cancel-editor').addEventListener('click', closeItemEditor);
+        $('btn-save-item').addEventListener('click', saveEditedItem);
+
+        $('btn-upload-icon').addEventListener('click', () => $('file-icon-input').click());
+        $('file-icon-input').addEventListener('change', (e) => {
+          processIconFile(e.target.files[0]);
+          e.target.value = '';
+        });
+
+        $('btn-reset-icon').addEventListener('click', () => {
+          editorIconValue = '';
+          $('editor-icon-input').value = '';
+          updateEditorIconPreview();
+          showToast('Выбрана стандартная иконка');
+        });
+
+        $('editor-icon-input').addEventListener('input', (e) => {
+          editorIconValue = e.target.value.trim();
+          updateEditorIconPreview();
+        });
+
+        $('btn-clear-code').addEventListener('click', () => {
+          $('editor-item-code').value = '';
+          $('editor-item-code').focus();
+        });
+
+        $('btn-paste-clipboard').addEventListener('click', async () => {
+          const area = $('editor-item-code');
+          if (navigator.clipboard && navigator.clipboard.readText) {
+            try {
+              const text = await navigator.clipboard.readText();
+              if (text) {
+                area.value = text;
+                showToast('Код вставлен из буфера обмена');
+                return;
+              } else {
+                showToast('Буфер обмена пуст');
+              }
+            } catch (err) {}
+          }
+          area.focus();
+          showToast('Нажмите Ctrl+V или «Вставить» внутри поля кода');
+        });
+
+        $('btn-clear-block-data').addEventListener('click', () => {
+          if (editingItemId && confirm('Удалить автосохранённые данные этого блока?')) {
+            delete state.blockData[editingItemId];
+            saveState();
+            $('editor-autosave-row').style.display = 'none';
+            showToast('Данные блока очищены');
+          }
+        });
+
+        /* Рабочая область */
+        $('btn-back-menu').addEventListener('click', closeBlockWorkspace);
+        $('btn-reload-block').addEventListener('click', () => {
+          if (activeBlockId) {
+            flushActiveBlock();
+            launchBlock(activeBlockId);
+          }
+        });
+        $('btn-edit-active-block').addEventListener('click', () => {
+          if (activeBlockId) {
+            flushActiveBlock();
+            openItemEditor(activeBlockId);
+          }
+        });
+
+        /* Экспорт / Импорт / Сброс */
+        $('btn-export').addEventListener('click', () => {
+          flushActiveBlock();
+          const json = JSON.stringify(state, null, 2);
+          const blob = new Blob([json], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `menu-backup-${new Date().toISOString().slice(0, 10)}.json`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(json).catch(() => {});
+          }
+          showToast('Конфигурация экспортирована');
+        });
+
+        $('btn-import').addEventListener('click', () => {
+          $('import-json-text').value = '';
+          $('import-modal').classList.add('open');
+        });
+
+        $('close-import').addEventListener('click', () => $('import-modal').classList.remove('open'));
+        $('btn-cancel-import').addEventListener('click', () => $('import-modal').classList.remove('open'));
+
+        $('btn-choose-json-file').addEventListener('click', () => $('file-import-input').click());
+        $('file-import-input').addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => { $('import-json-text').value = reader.result || ''; };
+          reader.readAsText(file);
+          e.target.value = '';
+        });
+
+        $('btn-apply-import').addEventListener('click', () => {
+          try {
+            const parsed = JSON.parse($('import-json-text').value);
+            if (parsed.settings) state.settings = { ...DEFAULT_SETTINGS, ...parsed.settings };
+            if (Array.isArray(parsed.items)) state.items = parsed.items;
+            if (parsed.blockData && typeof parsed.blockData === 'object') state.blockData = parsed.blockData;
+            if (typeof parsed.passwordHash === 'string') state.passwordHash = parsed.passwordHash;
+            saveState();
+            applySettings();
+            syncSettingsControls();
+            renderManageList();
+            renderMenu();
+            $('import-modal').classList.remove('open');
+            showToast('Конфигурация загружена');
+          } catch (err) {
+            showToast('Ошибка: некорректный JSON');
+          }
+        });
+
+        $('btn-reset-ui').addEventListener('click', () => {
+          if (confirm('Сбросить настройки внешнего вида на стандартные? (Пункты и данные блоков сохранятся)')) {
+            state.settings = { ...DEFAULT_SETTINGS };
+            saveState();
+            applySettings();
+            syncSettingsControls();
+            renderMenu();
+            showToast('Оформление сброшено');
+          }
+        });
+
+        /* Пароль и блокировка */
+        $('btn-password').addEventListener('click', () => {
+          $('inp-new-password').value = '';
+          $('password-extra-actions').style.display = state.passwordHash ? 'flex' : 'none';
+          $('password-modal').classList.add('open');
+          setTimeout(() => $('inp-new-password').focus(), 60);
+        });
+
+        const closePwdModal = () => $('password-modal').classList.remove('open');
+        $('btn-cancel-password').addEventListener('click', closePwdModal);
+        $('password-modal').addEventListener('click', (e) => {
+          if (e.target === $('password-modal')) closePwdModal();
+        });
+
+        $('btn-save-password').addEventListener('click', () => {
+          const pwd = $('inp-new-password').value;
+          if (!pwd) { closePwdModal(); return; }
+          state.passwordHash = simpleHash(pwd);
+          saveState();
+          applySettings();
+          closePwdModal();
+          showToast('Пароль установлен');
+        });
+
+        $('btn-remove-password').addEventListener('click', () => {
+          state.passwordHash = '';
+          saveState();
+          applySettings();
+          closePwdModal();
+          showToast('Пароль удалён');
+        });
+
+        $('btn-lock-now').addEventListener('click', () => {
+          closePwdModal();
+          $('settings-modal').classList.remove('open');
+          showLockScreen();
+        });
+
+        $('btn-unlock').addEventListener('click', tryUnlock);
+        $('inp-unlock-password').addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') tryUnlock();
+        });
+
+        /* Приём автосохранения и команд от открытых блоков */
+        window.addEventListener('message', (e) => {
+          if (!e.data) return;
+          if (e.data.type === 'close-block') {
+            closeBlockWorkspace();
+          } else if (e.data.type === 'block-autosave' && e.data.blockId) {
+            state.blockData[e.data.blockId] = e.data.data;
+            saveState();
+          }
+        });
+
+        /* Финальное сохранение при сворачивании/закрытии вкладки */
+        window.addEventListener('pagehide', flushActiveBlock);
+        window.addEventListener('beforeunload', flushActiveBlock);
+      }
+
+      function showLockScreen() {
+        $('inp-unlock-password').value = '';
+        $('lock-error').textContent = '';
+        $('lock-screen').classList.add('active');
+        setTimeout(() => $('inp-unlock-password').focus(), 60);
+      }
+
+      function tryUnlock() {
+        const pwd = $('inp-unlock-password').value;
+        if (simpleHash(pwd) === state.passwordHash) {
+          $('lock-screen').classList.remove('active');
+          $('lock-error').textContent = '';
+        } else {
+          $('lock-error').textContent = 'Неверный пароль';
+          $('inp-unlock-password').select();
+        }
+      }
+
+      /* Инициализация */
+      loadState();
+      applySettings();
+      renderMenu();
+      bindEvents();
+
+      if (state.passwordHash) {
+        showLockScreen();
+      }
+    })();
+  </script>
+</body>
+</html>
