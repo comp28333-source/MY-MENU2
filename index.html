@@ -1007,6 +1007,22 @@
       .icon-editor-box { grid-template-columns: 56px 1fr; }
       .icon-preview-slot { width: 56px; height: 56px; }
     }
+    /* Водяной знак БЛiК в нижнем левом углу */
+    .watermark-blik {
+      position: fixed;
+      left: max(14px, env(safe-area-inset-left));
+      bottom: max(12px, env(safe-area-inset-bottom));
+      z-index: 50;
+      font-family: var(--font-family);
+      font-size: clamp(13px, 2.4vw, 18px);
+      font-weight: 800;
+      letter-spacing: 2.5px;
+      color: var(--text-muted);
+      opacity: 0.45;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
   </style>
 </head>
 <body>
@@ -1340,6 +1356,9 @@
       sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads allow-same-origin"
     ></iframe>
   </section>
+
+<!-- Водяной знак -->
+  <div class="watermark-blik" aria-hidden="true">БЛiК</div>
 
   <!-- Уведомление -->
   <div class="toast" id="toast"></div>
