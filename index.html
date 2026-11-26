@@ -253,7 +253,7 @@
     .menu-list.mode-icons {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(calc(var(--icon-size) + 14px), 1fr));
-      gap: max(12px, var(--item-gap)) 8px;
+      gap: var(--icon-gap-y, 14px) var(--icon-gap-x, 8px);
       align-items: start;
     }
 
@@ -1093,11 +1093,26 @@
             <div class="setting-label" style="margin-top:6px;">КОЛОНОК В СЕТКЕ</div>
             <select id="inp-icon-cols" class="neu-inset select-input">
               <option value="auto">Авто (под размер экрана)</option>
+              <option value="2">2 в ряд</option>
               <option value="3">3 в ряд</option>
               <option value="4">4 в ряд</option>
               <option value="5">5 в ряд (как на скрине)</option>
               <option value="6">6 в ряд</option>
+              <option value="7">7 в ряд</option>
+              <option value="8">8 в ряд</option>
             </select>
+
+            <div class="setting-label" style="margin-top:6px;">
+              <span>ОТСТУП ПО ГОРИЗОНТАЛИ</span>
+              <span id="lbl-icon-gap-x">8PX</span>
+            </div>
+            <input type="range" id="inp-icon-gap-x" min="2" max="32" step="1" />
+
+            <div class="setting-label" style="margin-top:6px;">
+              <span>ОТСТУП ПО ВЕРТИКАЛИ</span>
+              <span id="lbl-icon-gap-y">14PX</span>
+            </div>
+            <input type="range" id="inp-icon-gap-y" min="4" max="36" step="1" />
 
             <label class="check-row" style="margin-top:4px;">
               <input type="checkbox" id="inp-show-icons-list" class="custom-check" />
@@ -1493,6 +1508,8 @@
         menuStyle: 'list', // 'list' | 'icons'
         iconSize: 64,
         iconCols: 'auto',
+        iconGapX: 8,
+        iconGapY: 14,
         showIconsInList: false,
         menuTitle: 'МЕНЮ',
         accent: '#007aff',
@@ -1662,6 +1679,8 @@
         root.style.setProperty('--menu-width', s.menuWidth + 'px');
         root.style.setProperty('--icon-size', s.iconSize + 'px');
         root.style.setProperty('--icon-cols', s.iconCols);
+        root.style.setProperty('--icon-gap-x', (s.iconGapX ?? 8) + 'px');
+        root.style.setProperty('--icon-gap-y', (s.iconGapY ?? 14) + 'px');
         root.style.setProperty('--backdrop-blur', s.backdropBlur ? '8px' : '0px');
 
         $('menu-title-display').textContent = s.menuTitle.trim() || 'МЕНЮ';
@@ -1692,6 +1711,10 @@
         $('inp-icon-size').value = s.iconSize;
         $('lbl-icon-size').textContent = s.iconSize + 'PX';
         $('inp-icon-cols').value = s.iconCols;
+        $('inp-icon-gap-x').value = s.iconGapX ?? 8;
+        $('lbl-icon-gap-x').textContent = (s.iconGapX ?? 8) + 'PX';
+        $('inp-icon-gap-y').value = s.iconGapY ?? 14;
+        $('lbl-icon-gap-y').textContent = (s.iconGapY ?? 14) + 'PX';
         $('inp-show-icons-list').checked = !!s.showIconsInList;
 
         $('inp-menu-title').value = s.menuTitle;
@@ -2454,6 +2477,8 @@ ${code}
         };
 
         bindRange('inp-icon-size', 'lbl-icon-size', 'iconSize', 'PX');
+        bindRange('inp-icon-gap-x', 'lbl-icon-gap-x', 'iconGapX', 'PX');
+        bindRange('inp-icon-gap-y', 'lbl-icon-gap-y', 'iconGapY', 'PX');
         bindRange('inp-radius', 'lbl-radius', 'radius', 'PX');
         bindRange('inp-shadow', 'lbl-shadow', 'shadowDepth', 'PX');
         bindRange('inp-intensity', 'lbl-intensity', 'shadowIntensity', '%');
