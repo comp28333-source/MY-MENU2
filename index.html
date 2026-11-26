@@ -1332,6 +1332,8 @@
         ЗАДАЙТЕ НОВЫЙ ПАРОЛЬ ДЛЯ ЗАЩИТЫ МЕНЮ<br />(ПУСТОЕ ПОЛЕ — ОТМЕНА):
       </p>
       <input type="password" id="inp-new-password" class="neu-inset text-input" placeholder="Пароль" autocomplete="new-password" />
+      <input type="password" id="inp-confirm-password" class="neu-inset text-input" placeholder="Повторите пароль" autocomplete="new-password" />
+      <div class="lock-error" id="pwd-setup-error"></div>
       <div class="modal-footer-btns">
         <button type="button" class="btn-ok-green" id="btn-save-password">OK</button>
         <button type="button" class="neu-btn btn-secondary" id="btn-cancel-password">ОТМЕНА</button>
@@ -2652,6 +2654,8 @@ ${code}
         /* Пароль и блокировка */
         $('btn-password').addEventListener('click', () => {
           $('inp-new-password').value = '';
+          $('inp-confirm-password').value = '';
+          $('pwd-setup-error').textContent = '';
           $('password-extra-actions').style.display = state.passwordHash ? 'flex' : 'none';
           $('password-modal').classList.add('open');
           setTimeout(() => $('inp-new-password').focus(), 60);
@@ -2663,9 +2667,25 @@ ${code}
           if (e.target === $('password-modal')) closePwdModal();
         });
 
+        $('inp-new-password').addEventListener('input', () => { $('pwd-setup-error').textContent = ''; });
+        $('inp-confirm-password').addEventListener('input', () => { $('pwd-setup-error').textContent = ''; });
+
+        $('inp-new-password').addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') $('inp-confirm-password').focus();
+        });
+        $('inp-confirm-password').addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') $('btn-save-password').click();
+        });
+
         $('btn-save-password').addEventListener('click', () => {
           const pwd = $('inp-new-password').value;
-          if (!pwd) { closePwdModal(); return; }
+          const pwd2 = $('inp-confirm-password').value;
+          if (!pwd && !pwd2) { closePwdModal(); return; }
+          if (pwd !== pwd2) {
+            $('pwd-setup-error').textContent = 'Пароли не совпадают!';
+            $('inp-confirm-password').select();
+            return;
+          }
           state.passwordHash = simpleHash(pwd);
           saveState();
           applySettings();
